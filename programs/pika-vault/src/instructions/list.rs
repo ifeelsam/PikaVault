@@ -2,25 +2,16 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
-        create_master_edition_v3,
-        create_metadata_accounts_v3,
-        mpl_token_metadata::types::{ Collection, Creator, DataV2 },
-        CreateMasterEditionV3,
-        CreateMetadataAccountsV3,
-        Metadata,
+        create_master_edition_v3, create_metadata_accounts_v3,
+        mpl_token_metadata::types::{Collection, Creator, DataV2},
+        CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
     },
     token_interface::{
-        mint_to,
-        transfer_checked,
-        Mint,
-        MintTo,
-        TokenAccount,
-        TokenInterface,
-        TransferChecked,
+        mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
     },
 };
 
-use crate::state::{ ListingAccount, ListingStatus, MarketPlace, UserAccount };
+use crate::state::{ListingAccount, ListingStatus, MarketPlace, UserAccount};
 
 #[derive(Accounts)]
 pub struct List<'info> {
@@ -119,7 +110,7 @@ impl<'info> List<'info> {
         listing_price: u64,
         card_metadata: String,
         image_url: String,
-        bumps: &ListBumps
+        bumps: &ListBumps,
     ) -> Result<()> {
         let cpi_programs = self.token_program.to_account_info();
         let cpi_account = MintTo {
@@ -206,10 +197,8 @@ impl<'info> List<'info> {
             mint: self.nft_mint.to_account_info(),
         };
 
-        let cpi_ctx: CpiContext<'_, '_, '_, '_, TransferChecked<'_>> = CpiContext::new(
-            cpi_program,
-            cpi_accounts
-        );
+        let cpi_ctx: CpiContext<'_, '_, '_, '_, TransferChecked<'_>> =
+            CpiContext::new(cpi_program, cpi_accounts);
         transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
 
         self.user_account.nft_listed += 1;

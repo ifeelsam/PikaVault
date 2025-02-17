@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{ transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked },
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
-use crate::{ marketplace, ListingAccount, ListingStatus, MarketPlace, UserAccount };
+use crate::{ListingAccount, ListingStatus, MarketPlace, UserAccount};
 
 #[derive(Accounts)]
 pub struct Delist<'info> {
@@ -63,7 +63,11 @@ impl<'info> Delist<'info> {
 
         let marketplace_ref = self.marketplace.key();
         let nft_ref = self.nft_mint.key();
-        let seeds = &[marketplace_ref.as_ref(), nft_ref.as_ref(), &[self.listing.bump]];
+        let seeds = &[
+            marketplace_ref.as_ref(),
+            nft_ref.as_ref(),
+            &[self.listing.bump],
+        ];
         let signer_seeds = &[&seeds[..]];
 
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);

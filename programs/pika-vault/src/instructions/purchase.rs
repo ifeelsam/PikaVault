@@ -2,7 +2,7 @@ use crate::error::ListingError;
 use crate::state::{Escrow, ListingAccount, ListingStatus, MarketPlace, UserAccount};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::token::Mint;
 
 #[derive(Accounts)]
 pub struct Purchase<'info> {
@@ -45,13 +45,6 @@ pub struct Purchase<'info> {
     pub escrow: Account<'info, Escrow>,
 
     pub nft_mint: Account<'info, Mint>,
-
-    #[account(
-        mut,
-        associated_token::mint = nft_mint,
-        associated_token::authority = listing
-    )]
-    pub vault: Account<'info, TokenAccount>,
 
     pub system_program: Program<'info, System>,
 }

@@ -55,6 +55,10 @@ pub mod pika_vault {
     pub fn release_escrow(ctx: Context<ReleaseEscrow>) -> Result<()> {
         ctx.accounts.release_escrow()
     }
+
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        ctx.accounts.refund()
+    }
 }
 
 // - Upload Card & Mint NFT

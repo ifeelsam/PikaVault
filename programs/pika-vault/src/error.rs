@@ -24,4 +24,13 @@ pub enum ListingError {
 
     #[msg("Escrow creation failed.")]
     EscrowCreationFailed,
+
+    #[msg("listing is not currently marked as sold")]
+    ListingNotSold,
+
+    #[msg("you are not authorized to request a refund for this purchase")]
+    UnauthorizedRefund,
+
+    #[msg("escrow funds have already been released")]
+    EscrowAlreadyReleased,
 }
