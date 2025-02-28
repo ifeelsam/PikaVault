@@ -2,25 +2,16 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
-        create_master_edition_v3,
-        create_metadata_accounts_v3,
-        mpl_token_metadata::types::{ Collection, Creator, DataV2 },
-        CreateMasterEditionV3,
-        CreateMetadataAccountsV3,
-        Metadata,
+        create_master_edition_v3, create_metadata_accounts_v3,
+        mpl_token_metadata::types::{Collection, Creator, DataV2},
+        CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
     },
     token_interface::{
-        mint_to,
-        transfer_checked,
-        Mint,
-        MintTo,
-        TokenAccount,
-        TokenInterface,
-        TransferChecked,
+        mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
     },
 };
 
-use crate::state::{ ListingAccount, ListingStatus, MarketPlace, UserAccount };
+use crate::state::{ListingAccount, ListingStatus, MarketPlace, UserAccount};
 
 #[derive(Accounts)]
 pub struct List<'info> {
@@ -120,7 +111,7 @@ impl<'info> List<'info> {
         listing_price: u64,
         card_metadata: String,
         image_url: String,
-        bumps: &ListBumps
+        bumps: &ListBumps,
     ) -> Result<()> {
         let cpi_programs = self.token_program.to_account_info();
         let cpi_account = MintTo {

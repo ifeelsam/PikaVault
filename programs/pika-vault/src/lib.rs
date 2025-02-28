@@ -42,6 +42,10 @@ pub mod pika_vault {
         )?;
         Ok(())
     }
+
+    pub fn delist(ctx: Context<Delist>) -> Result<()> {
+        ctx.accounts.delist()
+    }
 }
 
 // - Upload Card & Mint NFT

@@ -9,3 +9,7 @@ pub use register_user::*;
 pub mod list;
 
 pub use list::*;
+
+pub mod delist;
+
+pub use delist::*;
