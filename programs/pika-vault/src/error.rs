@@ -8,6 +8,6 @@ pub enum ErrorCode {
 
 #[error_code]
 pub enum MarketplaceError {
-    #[msg("input name is too long!")]    
+    #[msg("input name is too long!")]
     NameTooLong,
 }

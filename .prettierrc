@@ -1,0 +1,8 @@
+{
+    "tabWidth": 4,
+    "useTabs": false,
+    "overrides": [
+        { "files": "programs/*.rs", "options": { "printWidth": 80 } }
+    ],
+    "plugins": ["prettier-plugin-rust"]
+}

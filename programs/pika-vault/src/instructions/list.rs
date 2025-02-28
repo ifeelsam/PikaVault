@@ -2,16 +2,25 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
-        create_master_edition_v3, create_metadata_accounts_v3,
-        mpl_token_metadata::types::{Collection, Creator, DataV2},
-        CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
+        create_master_edition_v3,
+        create_metadata_accounts_v3,
+        mpl_token_metadata::types::{ Collection, Creator, DataV2 },
+        CreateMasterEditionV3,
+        CreateMetadataAccountsV3,
+        Metadata,
     },
     token_interface::{
-        mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
+        mint_to,
+        transfer_checked,
+        Mint,
+        MintTo,
+        TokenAccount,
+        TokenInterface,
+        TransferChecked,
     },
 };
 
-use crate::state::{ListingAccount, ListingStatus, MarketPlace, UserAccount};
+use crate::state::{ ListingAccount, ListingStatus, MarketPlace, UserAccount };
 
 #[derive(Accounts)]
 pub struct List<'info> {
@@ -27,10 +36,7 @@ pub struct List<'info> {
     pub user_account: Account<'info, UserAccount>,
 
     // Marketplace metadata verification
-    #[account(
-        seeds = [b"marketplace", marketplace.authority.as_ref()],
-        bump = marketplace.bump
-    )]
+    #[account(seeds = [b"marketplace", marketplace.authority.as_ref()], bump = marketplace.bump)]
     pub marketplace: Account<'info, MarketPlace>,
 
     // NFT mint account
@@ -39,7 +45,7 @@ pub struct List<'info> {
         payer = maker,
         mint::authority = maker,
         mint::decimals = 0,
-        mint::freeze_authority = maker,
+        mint::freeze_authority = maker
     )]
     pub nft_mint: InterfaceAccount<'info, Mint>,
 
@@ -48,7 +54,7 @@ pub struct List<'info> {
         init_if_needed,
         payer = maker,
         associated_token::mint = nft_mint,
-        associated_token::authority = maker,
+        associated_token::authority = maker
     )]
     pub maker_ata: InterfaceAccount<'info, TokenAccount>,
 
@@ -114,7 +120,7 @@ impl<'info> List<'info> {
         listing_price: u64,
         card_metadata: String,
         image_url: String,
-        bumps: &ListBumps,
+        bumps: &ListBumps
     ) -> Result<()> {
         let cpi_programs = self.token_program.to_account_info();
         let cpi_account = MintTo {
