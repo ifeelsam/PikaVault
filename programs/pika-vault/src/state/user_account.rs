@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(InitSpace)]
 pub struct UserAccount {
-    pub authority : Pubkey,
+    pub authority: Pubkey,
     pub bump: u8,
     pub nft_sold: u64,
     pub nft_bought: u64,

@@ -9,5 +9,5 @@ pub struct Escrow {
     pub nft_mint: Pubkey,
     pub sale_amount: u64,
     pub locked_amount: u64,
-    pub timestamp: i128
+    pub timestamp: i128,
 }

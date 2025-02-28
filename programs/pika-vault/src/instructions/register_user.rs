@@ -9,20 +9,21 @@ pub struct RegisterUser<'info> {
 
     #[account(
         init,
-        payer = user, 
+        payer = user,
+
         space = UserAccount::INIT_SPACE + 8,
         seeds = [b"user_account", user.key().as_ref()],
         bump
     )]
     pub user_account: Account<'info, UserAccount>,
 
-    pub system_program: Program<'info, System>
+    pub system_program: Program<'info, System>,
 }
 
-impl <'info> RegisterUser<'info> {
+impl<'info> RegisterUser<'info> {
     pub fn init(&mut self, bumps: &RegisterUserBumps) -> Result<()> {
-        self.user_account.set_inner( UserAccount {
-            authority: self.user.key(),            
+        self.user_account.set_inner(UserAccount {
+            authority: self.user.key(),
             nft_sold: 0,
             nft_bought: 0,
             nft_listed: 0,

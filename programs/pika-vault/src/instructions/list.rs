@@ -1,26 +1,17 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken, 
+    associated_token::AssociatedToken,
     metadata::{
-        create_master_edition_v3, 
-        create_metadata_accounts_v3, 
-        mpl_token_metadata::types::{Collection, Creator, DataV2}, 
-        CreateMasterEditionV3, 
-        CreateMetadataAccountsV3, 
-        Metadata
-    }, 
+        create_master_edition_v3, create_metadata_accounts_v3,
+        mpl_token_metadata::types::{Collection, Creator, DataV2},
+        CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata,
+    },
     token_interface::{
-        mint_to, 
-        transfer_checked, 
-        Mint, 
-        MintTo, 
-        TokenAccount, 
-        TokenInterface, 
-        TransferChecked
-    }
+        mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
+    },
 };
 
-use crate::state::{ListingAccount, MarketPlace, UserAccount, ListingStatus};
+use crate::state::{ListingAccount, ListingStatus, MarketPlace, UserAccount};
 
 #[derive(Accounts)]
 pub struct List<'info> {
@@ -45,7 +36,7 @@ pub struct List<'info> {
     // NFT mint account
     #[account(
         init,
-        payer = maker, 
+        payer = maker,
         mint::authority = maker,
         mint::decimals = 0,
         mint::freeze_authority = maker,
@@ -105,7 +96,7 @@ pub struct List<'info> {
     )]
     /// CHECK: This account is created via CPI
     pub master_edition_account: UncheckedAccount<'info>,
-    
+
     pub rent: Sysvar<'info, Rent>,
 
     // Programs
@@ -123,9 +114,8 @@ impl<'info> List<'info> {
         listing_price: u64,
         card_metadata: String,
         image_url: String,
-        bumps: &ListBumps
+        bumps: &ListBumps,
     ) -> Result<()> {
-        
         let cpi_programs = self.token_program.to_account_info();
         let cpi_account = MintTo {
             mint: self.nft_mint.to_account_info(),
@@ -136,19 +126,17 @@ impl<'info> List<'info> {
         let cpi_ctx = CpiContext::new(cpi_programs, cpi_account);
         mint_to(cpi_ctx, 1)?;
 
-        let creators = vec![
-            Creator {
-                address: self.maker.key(),
-                verified: true,
-                share: 100,
-            }
-        ];
-        
+        let creators = vec![Creator {
+            address: self.maker.key(),
+            verified: true,
+            share: 100,
+        }];
+
         let collection = Some(Collection {
-            verified: false, 
+            verified: false,
             key: self.collection_mint.key(),
         });
-        
+
         let data = DataV2 {
             name,
             symbol,
@@ -158,7 +146,7 @@ impl<'info> List<'info> {
             collection,
             uses: None,
         };
-        
+
         // Create metadata account via CPI
         let cpi_accounts = CreateMetadataAccountsV3 {
             metadata: self.metadata.to_account_info(),
@@ -169,20 +157,11 @@ impl<'info> List<'info> {
             system_program: self.system_program.to_account_info(),
             rent: self.rent.to_account_info(),
         };
-        
-        let cpi_ctx = CpiContext::new(
-            self.metadata_program.to_account_info(),
-            cpi_accounts,
-        );
-        
-        create_metadata_accounts_v3(
-            cpi_ctx,
-            data,
-            true,
-            true,
-            None,
-        )?;
-        
+
+        let cpi_ctx = CpiContext::new(self.metadata_program.to_account_info(), cpi_accounts);
+
+        create_metadata_accounts_v3(cpi_ctx, data, true, true, None)?;
+
         // Create master edition via CPI
         let cpi_accounts = CreateMasterEditionV3 {
             edition: self.master_edition_account.to_account_info(),
@@ -195,24 +174,22 @@ impl<'info> List<'info> {
             system_program: self.system_program.to_account_info(),
             rent: self.rent.to_account_info(),
         };
-        
-        let cpi_ctx = CpiContext::new(
-            self.metadata_program.to_account_info(),
-            cpi_accounts,
-        );
-        
+
+        let cpi_ctx = CpiContext::new(self.metadata_program.to_account_info(), cpi_accounts);
+
         create_master_edition_v3(cpi_ctx, Some(0))?;
 
         // Create the listing account
         self.listing.set_inner(ListingAccount {
-            owner: self.maker.key(), 
+            owner: self.maker.key(),
             nft_address: self.nft_mint.key(),
-            card_metadata, 
+            card_metadata,
+
             listing_price,
             status: ListingStatus::Active,
             created_at: Clock::get()?.unix_timestamp,
             image_url,
-            bump: bumps.listing
+            bump: bumps.listing,
         });
 
         let cpi_program = self.token_program.to_account_info();
@@ -226,10 +203,10 @@ impl<'info> List<'info> {
 
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
-        
+
         // Update user stats
         self.user_account.nft_listed += 1;
-        
+
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::state::MarketPlace;
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -24,9 +24,8 @@ impl<'info> Initialize<'info> {
             authority: self.admin.key(),
             fee,
             bump: bumps.marketplace,
-            treasury_bump: bumps.treasury
+            treasury_bump: bumps.treasury,
         });
         Ok(())
     }
 }
-

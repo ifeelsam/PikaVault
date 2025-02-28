@@ -12,7 +12,7 @@ pub struct ListingAccount {
     pub created_at: i64,
     #[max_len(46)] // Ipfs hash
     pub image_url: String,
-    pub bump: u8
+    pub bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]

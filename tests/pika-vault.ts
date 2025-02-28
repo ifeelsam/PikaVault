@@ -9,7 +9,7 @@ import {
   ComputeBudgetInstruction,
   Transaction,
   ComputeBudgetProgram,
-  sendAndConfirmTransaction
+  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import { assert } from "chai";
 import {
@@ -39,7 +39,6 @@ describe("pika-vault testing", () => {
   const metadataProgramId = new PublicKey(
     "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
   );
-
 
   it("Airdrop for nft", async () => {
     await Promise.all(
@@ -126,7 +125,8 @@ describe("pika-vault testing", () => {
     assert.equal(
       userAccount.nftListed.toNumber(),
       0,
-      `NFT Listed check failed!`    );
+      `NFT Listed check failed!`
+    );
     assert.equal(userAccount.bump, userAccountBump, `Bump check failed!`);
   });
 
@@ -143,17 +143,16 @@ describe("pika-vault testing", () => {
 
     collectionMint = await createMint(
       anchor.getProvider().connection,
-      admin, 
+      admin,
       admin.publicKey,
-      admin.publicKey, 
-      0 
+      admin.publicKey,
+      0
     );
 
     [marketplace] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
       program.programId
     );
-
 
     await Promise.all(
       [nftMintKeypair].map(async (k) => {
@@ -187,47 +186,58 @@ describe("pika-vault testing", () => {
     [listing, listingBump] = await PublicKey.findProgramAddressSync(
       [marketplace.toBuffer(), nftMint.toBuffer()],
       program.programId
-    );// accounts fetch
+    ); // accounts fetch
 
     vault = await getAssociatedTokenAddress(nftMint, listing, true);
 
     const ix = await program.methods
-        .mintAndList(
-            "Test NFT",
-            "TNT",
-            new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
-            "Test Card Metadata",
-            "https://example.com/image.png"
-        )
-        .accountsStrict({
-            maker: user.publicKey,
-            userAccount: userAccountPDA,
-            marketplace,
-            nftMint,
-            makerAta,
-            vault,
-            listing,
-            collectionMint,
-            metadata,
-            masterEditionAccount: masterEdition,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-            systemProgram: anchor.web3.SystemProgram.programId,
-            metadataProgram: metadataProgramId,
-        })
-        .signers([user, nftMintKeypair])
-        .instruction();
+      .mintAndList(
+        "Test NFT",
+        "TNT",
+        new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
+        "Test Card Metadata",
+        "https://example.com/image.png"
+      )
+      .accountsStrict({
+        maker: user.publicKey,
+        userAccount: userAccountPDA,
+        marketplace,
+        nftMint,
+        makerAta,
+        vault,
+        listing,
+        collectionMint,
+        metadata,
+        masterEditionAccount: masterEdition,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        metadataProgram: metadataProgramId,
+      })
+      .signers([user, nftMintKeypair])
+      .instruction();
 
-    const tx = new Transaction()
+    const tx = new Transaction();
     tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 }));
-    tx.add(ix)
-    const sig = await sendAndConfirmTransaction(anchor.getProvider().connection, tx, [user, nftMintKeypair]);
-
+    tx.add(ix);
+    const sig = await sendAndConfirmTransaction(
+      anchor.getProvider().connection,
+      tx,
+      [user, nftMintKeypair]
+    );
 
     const listingAccount = await program.account.listingAccount.fetch(listing);
-    assert.equal(listingAccount.owner.toString(), user.publicKey.toString(), "failed owner check");
-    assert.equal(listingAccount.nftAddress.toString(), nftMint.toString(), "failed nft address");
+    assert.equal(
+      listingAccount.owner.toString(),
+      user.publicKey.toString(),
+      "failed owner check"
+    );
+    assert.equal(
+      listingAccount.nftAddress.toString(),
+      nftMint.toString(),
+      "failed nft address"
+    );
     assert.equal(listingAccount.cardMetadata, "Test Card Metadata");
     assert.equal(
       listingAccount.listingPrice.toString(),
@@ -261,4 +271,3 @@ const confirmTx = async (signature: string) => {
   );
   return signature;
 };
-
