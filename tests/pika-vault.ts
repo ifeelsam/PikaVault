@@ -6,6 +6,10 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
   PublicKey,
+  ComputeBudgetInstruction,
+  Transaction,
+  ComputeBudgetProgram,
+  sendAndConfirmTransaction
 } from "@solana/web3.js";
 import { assert } from "chai";
 import {
@@ -122,8 +126,7 @@ describe("pika-vault testing", () => {
     assert.equal(
       userAccount.nftListed.toNumber(),
       0,
-      `NFT Listed check failed!`
-    );
+      `NFT Listed check failed!`    );
     assert.equal(userAccount.bump, userAccountBump, `Bump check failed!`);
   });
 
@@ -184,41 +187,47 @@ describe("pika-vault testing", () => {
     [listing, listingBump] = await PublicKey.findProgramAddressSync(
       [marketplace.toBuffer(), nftMint.toBuffer()],
       program.programId
-    );
+    );// accounts fetch
 
     vault = await getAssociatedTokenAddress(nftMint, listing, true);
 
-    await program.methods
-      .mintAndList(
-        "Test NFT",
-        "TNT",
-        new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
-        "Test Card Metadata",
-        "https://example.com/image.png"
-      )
-      .accountsStrict({
-        maker: user.publicKey,
-        userAccount: userAccountPDA,
-        marketplace,
-        nftMint,
-        makerAta,
-        vault,
-        listing,
-        collectionMint,
-        metadata,
-        masterEditionAccount: masterEdition,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        metadataProgram: metadataProgramId,
-      })
-      .signers([user, nftMintKeypair])
-      .rpc();
+    const ix = await program.methods
+        .mintAndList(
+            "Test NFT",
+            "TNT",
+            new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
+            "Test Card Metadata",
+            "https://example.com/image.png"
+        )
+        .accountsStrict({
+            maker: user.publicKey,
+            userAccount: userAccountPDA,
+            marketplace,
+            nftMint,
+            makerAta,
+            vault,
+            listing,
+            collectionMint,
+            metadata,
+            masterEditionAccount: masterEdition,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            metadataProgram: metadataProgramId,
+        })
+        .signers([user, nftMintKeypair])
+        .instruction();
+
+    const tx = new Transaction()
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 }));
+    tx.add(ix)
+    const sig = await sendAndConfirmTransaction(anchor.getProvider().connection, tx, [user, nftMintKeypair]);
+
 
     const listingAccount = await program.account.listingAccount.fetch(listing);
-    assert.equal(listingAccount.owner.toString(), user.publicKey.toString());
-    assert.equal(listingAccount.nftAddress.toString(), nftMint.toString());
+    assert.equal(listingAccount.owner.toString(), user.publicKey.toString(), "failed owner check");
+    assert.equal(listingAccount.nftAddress.toString(), nftMint.toString(), "failed nft address");
     assert.equal(listingAccount.cardMetadata, "Test Card Metadata");
     assert.equal(
       listingAccount.listingPrice.toString(),
@@ -232,12 +241,12 @@ describe("pika-vault testing", () => {
       anchor.getProvider().connection,
       vault
     );
-    assert.equal(vaultAccount.amount.toString(), "1");
+    assert.equal(vaultAccount.amount.toString(), "1", "bn error");
 
     const updatedUserAccount = await program.account.userAccount.fetch(
       userAccountPDA
     );
-    assert.equal(updatedUserAccount.nftListed, new anchor.BN(1));
+    assert.equal(updatedUserAccount.nftListed.toNumber(), 1);
   });
 });
 
@@ -252,3 +261,4 @@ const confirmTx = async (signature: string) => {
   );
   return signature;
 };
+

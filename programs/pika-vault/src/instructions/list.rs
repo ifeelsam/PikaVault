@@ -92,7 +92,6 @@ pub struct List<'info> {
     /// CHECK: This account is created via CPI
     pub metadata: UncheckedAccount<'info>,
 
-    // Master edition account for the NFT - using UncheckedAccount since it will be created in this instruction
     #[account(
         mut,
         seeds = [
