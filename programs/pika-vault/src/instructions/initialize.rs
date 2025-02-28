@@ -1,16 +1,14 @@
 use anchor_lang::prelude::*;
 use crate::state::MarketPlace;
-use crate::error::MarketplaceError;
 
 #[derive(Accounts)]
-#[instruction(name:String)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
         init,
         payer = admin,
-        seeds = [b"marketplace", name.as_str().as_bytes()],
+        seeds = [b"marketplace", admin.key().as_ref()],
         bump,
         space = 8 + MarketPlace::INIT_SPACE
     )]
@@ -21,8 +19,7 @@ pub struct Initialize<'info> {
 }
 
 impl<'info> Initialize<'info> {
-    pub fn init(&mut self, fee: u16, name: String, bumps: InitializeBumps) -> Result<()> {
-        require!(name.len() <= 32, MarketplaceError::NameTooLong);
+    pub fn init(&mut self, fee: u16, bumps: &InitializeBumps) -> Result<()> {
         self.marketplace.set_inner(MarketPlace {
             authority: self.admin.key(),
             fee,

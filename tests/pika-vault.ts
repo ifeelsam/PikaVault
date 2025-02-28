@@ -1,34 +1,97 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { PikaVault } from "../target/types/pika_vault";
-import { Keypair } from "@solana/web3.js";
+import {
+  Keypair,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+} from "@solana/web3.js";
 import { assert } from "chai";
-
+import {
+  TOKEN_PROGRAM_ID,
+  createMint,
+  getAssociatedTokenAddress,
+  getAccount,
+} from "@solana/spl-token";
 
 describe("pika-vault testing", () => {
-  // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-    const program = anchor.workspace.PikaVault as Program<PikaVault>;
-    let user = new Keypair();
-    let marketplaceAuthority = new Keypair();
-    let collectionMint = new Keypair();
+  const program = anchor.workspace.PikaVault as Program<PikaVault>;
+  let user = new Keypair();
+  let admin = new Keypair();
+  const fee = 1000;
+
+  let makerAta: PublicKey;
+  let vault: PublicKey;
+  let listing: PublicKey;
+  let listingBump: number;
+  let nftMint: PublicKey;
+  let marketplace: PublicKey;
+  let collectionMint: PublicKey;
+  let metadata: PublicKey;
+  let masterEdition: PublicKey;
+  const metadataProgramId = new PublicKey(
+    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+  );
 
 
-    it('Airdrop for User and Marketplace Authority', async () => {
-        await Promise.all(
-            [user, marketplaceAuthority].map(async (k) => {
-                return await anchor
-                    .getProvider()
-                    .connection.requestAirdrop(
-                        k.publicKey,
-                        10 * anchor.web3.LAMPORTS_PER_SOL,
-                    )
-                    .then(confirmTx)
-            }),
-        )
-    })
+  it("Airdrop for nft", async () => {
+    await Promise.all(
+      [user].map(async (k) => {
+        return await anchor
+          .getProvider()
+          .connection.requestAirdrop(k.publicKey, 100 * LAMPORTS_PER_SOL)
+          .then(confirmTx);
+      })
+    );
+  });
 
+  it("Airdrop for Marketplace Authority", async () => {
+    await Promise.all(
+      [admin].map(async (k) => {
+        return await anchor
+          .getProvider()
+          .connection.requestAirdrop(k.publicKey, 100 * LAMPORTS_PER_SOL)
+          .then(confirmTx);
+      })
+    );
+  });
+  it("Initializes Marketplace", async () => {
+    const [marketplacePDA, marketplaceBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
+        program.programId
+      );
+
+    const [treasuryPDA, treasuryBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("treasury"), marketplacePDA.toBuffer()],
+        program.programId
+      );
+    await program.methods
+      .initializeMarketplace(fee)
+      .accountsStrict({
+        admin: admin.publicKey,
+        marketplace: marketplacePDA,
+        treasury: treasuryPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc()
+      .then(confirmTx);
+
+    const marketplaceAccount = await program.account.marketPlace.fetch(
+      marketplacePDA
+    );
+    assert.equal(
+      marketplaceAccount.authority.toString(),
+      admin.publicKey.toString()
+    );
+    assert.equal(marketplaceAccount.bump, marketplaceBump);
+    assert.equal(marketplaceAccount.fee, fee);
+  });
 
   it("Registers a user", async () => {
     const [userAccountPDA, userAccountBump] =
@@ -43,7 +106,7 @@ describe("pika-vault testing", () => {
       })
       .signers([user])
       .rpc();
-    // Verify user account data
+
     const userAccount = await program.account.userAccount.fetch(userAccountPDA);
     assert.equal(
       userAccount.authority.toString(),
@@ -64,8 +127,120 @@ describe("pika-vault testing", () => {
     assert.equal(userAccount.bump, userAccountBump, `Bump check failed!`);
   });
 
+  it("Mints and Lists an NFT", async () => {
+    // Generate a keypair for the NFT mint
+    const nftMintKeypair = Keypair.generate();
+    nftMint = nftMintKeypair.publicKey;
 
+    const [userAccountPDA, userAccountBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from("user_account"), user.publicKey.toBuffer()],
+        program.programId
+      );
+
+    collectionMint = await createMint(
+      anchor.getProvider().connection,
+      admin, 
+      admin.publicKey,
+      admin.publicKey, 
+      0 
+    );
+
+    [marketplace] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
+      program.programId
+    );
+
+
+    await Promise.all(
+      [nftMintKeypair].map(async (k) => {
+        return await anchor
+          .getProvider()
+          .connection.requestAirdrop(k.publicKey, 100 * LAMPORTS_PER_SOL)
+          .then(confirmTx);
+      })
+    );
+    [metadata] = await PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        metadataProgramId.toBuffer(),
+        nftMint.toBuffer(),
+      ],
+      metadataProgramId
+    );
+
+    [masterEdition] = await PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        metadataProgramId.toBuffer(),
+        nftMint.toBuffer(),
+        Buffer.from("edition"),
+      ],
+      metadataProgramId
+    );
+
+    makerAta = await getAssociatedTokenAddress(nftMint, user.publicKey);
+
+    [listing, listingBump] = await PublicKey.findProgramAddressSync(
+      [marketplace.toBuffer(), nftMint.toBuffer()],
+      program.programId
+    );
+
+    vault = await getAssociatedTokenAddress(nftMint, listing, true);
+
+    await program.methods
+      .mintAndList(
+        "Test NFT",
+        "TNT",
+        new anchor.BN(anchor.web3.LAMPORTS_PER_SOL),
+        "Test Card Metadata",
+        "https://example.com/image.png"
+      )
+      .accountsStrict({
+        maker: user.publicKey,
+        userAccount: userAccountPDA,
+        marketplace,
+        nftMint,
+        makerAta,
+        vault,
+        listing,
+        collectionMint,
+        metadata,
+        masterEditionAccount: masterEdition,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        metadataProgram: metadataProgramId,
+      })
+      .signers([user, nftMintKeypair])
+      .rpc();
+
+    const listingAccount = await program.account.listingAccount.fetch(listing);
+    assert.equal(listingAccount.owner.toString(), user.publicKey.toString());
+    assert.equal(listingAccount.nftAddress.toString(), nftMint.toString());
+    assert.equal(listingAccount.cardMetadata, "Test Card Metadata");
+    assert.equal(
+      listingAccount.listingPrice.toString(),
+      anchor.web3.LAMPORTS_PER_SOL.toString()
+    );
+    assert.deepEqual(listingAccount.status, { active: {} });
+    assert.equal(listingAccount.imageUrl, "https://example.com/image.png");
+    assert.equal(listingAccount.bump, listingBump);
+
+    const vaultAccount = await getAccount(
+      anchor.getProvider().connection,
+      vault
+    );
+    assert.equal(vaultAccount.amount.toString(), "1");
+
+    const updatedUserAccount = await program.account.userAccount.fetch(
+      userAccountPDA
+    );
+    assert.equal(updatedUserAccount.nftListed, new anchor.BN(1));
+  });
 });
+
 const confirmTx = async (signature: string) => {
   const blockHash = await anchor.getProvider().connection.getLatestBlockhash();
   await anchor.getProvider().connection.confirmTransaction(
@@ -77,4 +252,3 @@ const confirmTx = async (signature: string) => {
   );
   return signature;
 };
-

@@ -7,6 +7,11 @@ skip-lint = false
 [programs.localnet]
 pika_vault = "6z9GJwjWb666YqcP8oocc54K4u3UbbJbh7efdKFH9x7Z"
 
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "tests/metaplex_token_metadata_program.so"
+
+
 [registry]
 url = "https://api.apr.dev"
 
