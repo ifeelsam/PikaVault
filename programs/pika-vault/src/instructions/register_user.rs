@@ -26,7 +26,6 @@ impl <'info> RegisterUser<'info> {
             nft_sold: 0,
             nft_bought: 0,
             nft_listed: 0,
-            total_volume: 0,
             created_at: Clock::get()?.unix_timestamp,
             bump: bumps.user_account,
         });
