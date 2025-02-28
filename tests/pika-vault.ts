@@ -15,9 +15,11 @@ import { assert } from "chai";
 import {
     TOKEN_PROGRAM_ID,
     createMint,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
     getAssociatedTokenAddress,
     getAccount,
 } from "@solana/spl-token";
+import { BN } from "bn.js";
 
 describe("pika-vault testing", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -142,16 +144,14 @@ describe("pika-vault testing", () => {
         assert.equal(userAccount.bump, userAccountBump, `Bump check failed!`);
     });
 
+    const [userAccountPDA, userAccountBump] =
+        anchor.web3.PublicKey.findProgramAddressSync(
+            [Buffer.from("user_account"), user.publicKey.toBuffer()],
+            program.programId
+        );
     it("Mints and Lists an NFT", async () => {
-        // Generate a keypair for the NFT mint
         const nftMintKeypair = Keypair.generate();
         nftMint = nftMintKeypair.publicKey;
-
-        const [userAccountPDA, userAccountBump] =
-            anchor.web3.PublicKey.findProgramAddressSync(
-                [Buffer.from("user_account"), user.publicKey.toBuffer()],
-                program.programId
-            );
 
         collectionMint = await createMint(
             anchor.getProvider().connection,
@@ -246,6 +246,8 @@ describe("pika-vault testing", () => {
         const listingAccount = await program.account.listingAccount.fetch(
             listing
         );
+
+        // checks
         assert.equal(
             listingAccount.owner.toString(),
             user.publicKey.toString(),
@@ -256,7 +258,11 @@ describe("pika-vault testing", () => {
             nftMint.toString(),
             "failed nft address"
         );
-        assert.equal(listingAccount.cardMetadata, "Test Card Metadata");
+        assert.equal(
+            listingAccount.cardMetadata,
+            "Test Card Metadata",
+            "error: failed to get listing's metadata"
+        );
         assert.equal(
             listingAccount.listingPrice.toString(),
             anchor.web3.LAMPORTS_PER_SOL.toString()
@@ -275,6 +281,81 @@ describe("pika-vault testing", () => {
             userAccountPDA
         );
         assert.equal(updatedUserAccount.nftListed.toNumber(), 1);
+    });
+
+    it("Delists an NFT", async () => {
+        const listingAccount = await program.account.listingAccount.fetch(
+            listing
+        );
+
+        // check if NFT is currently listed
+        assert.deepEqual(listingAccount.status, { active: {} });
+
+        // owner's token account balance before delisting
+        const ownerAtaBefore = await getAssociatedTokenAddress(
+            nftMint,
+            user.publicKey
+        );
+
+        // The owner ATA might not exist yet if they never received the token back
+        let ownerAtaBalanceBefore = 0;
+        try {
+            const tokenAccount = await getAccount(
+                anchor.getProvider().connection,
+                ownerAtaBefore
+            );
+            ownerAtaBalanceBefore = Number(tokenAccount.amount);
+        } catch (e) {
+            // ATA doesn't exist yet
+            console.error("ata doesn't exist:", e);
+        }
+
+        // check vault balance before delisting
+        const vaultAccount = await getAccount(
+            anchor.getProvider().connection,
+            vault
+        );
+        assert.equal(vaultAccount.amount.toString(), new BN(1).toString());
+
+        await program.methods
+            .delist()
+            .accountsStrict({
+                owner: user.publicKey,
+                userAccount: userAccountPDA,
+                marketplace,
+                nftMint,
+                ownerAta: ownerAtaBefore,
+                vault,
+                listing,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .signers([user])
+            .rpc();
+
+        const ownerAtaAfter = await getAccount(
+            anchor.getProvider().connection,
+            ownerAtaBefore
+        );
+        assert.equal(
+            ownerAtaAfter.amount,
+            BigInt(ownerAtaBalanceBefore + 1),
+            "error deliting: transfer back to owner"
+        );
+
+        try {
+            await program.account.listingAccount.fetch(listing);
+            assert.fail("Listing account should be closed");
+        } catch (e) {
+            console.error("error delisting NFT:", e);
+        }
+
+        // Verify user stats were updated
+        const updatedUserAccount = await program.account.userAccount.fetch(
+            userAccountPDA
+        );
+        assert.equal(updatedUserAccount.nftListed.toNumber(), 0);
     });
 });
 

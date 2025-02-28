@@ -76,6 +76,9 @@ impl<'info> Delist<'info> {
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
         transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
 
+        // decrement listed count in user account
+        self.user_account.nft_listed -= 1;
+
         Ok(())
     }
 }
