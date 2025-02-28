@@ -221,7 +221,7 @@ impl<'info> List<'info> {
     };
 
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-    transfer_checked(cpi_ctx, 1, self.nft_mint.decimals);
+    transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
     self.user_account.nft_listed += 1;
     Ok(())
     }

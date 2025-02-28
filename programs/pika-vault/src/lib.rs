@@ -19,7 +19,10 @@ pub mod pika_vault {
     pub fn register_user(ctx: Context<RegisterUser>) -> Result<()> {
         ctx.accounts.init(&ctx.bumps)
     }
-
+    pub fn init_marketplace(ctx: Context<List>, name: String, symbol: String, listing_price: u64, card_metadata: String, image_url: String,) -> Result<()>{
+        ctx.accounts.mint_and_list(name, symbol, listing_price, card_metadata, image_url, &ctx.bumps)?;
+        Ok(())
+    }
 }
 
 // - Upload Card & Mint NFT          
