@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
+    token_interface::{ transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked },
 };
 
-use crate::{marketplace, ListingAccount, ListingStatus, MarketPlace, UserAccount};
+use crate::{ marketplace, ListingAccount, ListingStatus, MarketPlace, UserAccount };
 
 #[derive(Accounts)]
 pub struct Delist<'info> {
@@ -18,10 +18,7 @@ pub struct Delist<'info> {
     )]
     pub user_account: Account<'info, UserAccount>,
 
-    #[account(
-        seeds = [b"marketplace", marketplace.authority.as_ref()],
-        bump = marketplace.bump
-    )]
+    #[account(seeds = [b"marketplace", marketplace.authority.as_ref()], bump = marketplace.bump)]
     pub marketplace: Account<'info, MarketPlace>,
 
     pub nft_mint: InterfaceAccount<'info, Mint>,
@@ -29,7 +26,7 @@ pub struct Delist<'info> {
         init_if_needed,
         payer = owner,
         associated_token::mint = nft_mint,
-        associated_token::authority = owner,
+        associated_token::authority = owner
     )]
     pub owner_ata: InterfaceAccount<'info, TokenAccount>,
 
@@ -66,11 +63,7 @@ impl<'info> Delist<'info> {
 
         let marketplace_ref = self.marketplace.key();
         let nft_ref = self.nft_mint.key();
-        let seeds = &[
-            marketplace_ref.as_ref(),
-            nft_ref.as_ref(),
-            &[self.listing.bump],
-        ];
+        let seeds = &[marketplace_ref.as_ref(), nft_ref.as_ref(), &[self.listing.bump]];
         let signer_seeds = &[&seeds[..]];
 
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);

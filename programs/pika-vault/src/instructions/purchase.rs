@@ -1,8 +1,8 @@
 use crate::error::MarketplaceError;
-use crate::state::{Escrow, ListingAccount, ListingStatus, MarketPlace, UserAccount};
+use crate::state::{ Escrow, ListingAccount, ListingStatus, MarketPlace, UserAccount };
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_lang::solana_program::{ program::invoke, system_instruction };
+use anchor_spl::token::{ Mint, TokenAccount };
 
 #[derive(Accounts)]
 pub struct Purchase<'info> {
@@ -16,10 +16,7 @@ pub struct Purchase<'info> {
     )]
     pub buyer_user_account: Account<'info, UserAccount>,
 
-    #[account(
-        seeds = [b"marketplace", marketplace.authority.as_ref()],
-        bump = marketplace.bump,
-    )]
+    #[account(seeds = [b"marketplace", marketplace.authority.as_ref()], bump = marketplace.bump)]
     pub marketplace: Account<'info, MarketPlace>,
 
     #[account(
@@ -59,7 +56,7 @@ impl<'info> Purchase<'info> {
         let transfer_instruction = system_instruction::transfer(
             self.buyer.key,
             self.escrow.to_account_info().key,
-            sale_amount,
+            sale_amount
         );
         invoke(
             &transfer_instruction,
@@ -67,7 +64,7 @@ impl<'info> Purchase<'info> {
                 self.buyer.to_account_info(),
                 self.escrow.to_account_info(),
                 self.system_program.to_account_info(),
-            ],
+            ]
         )?;
 
         self.escrow.seller = self.listing.owner;

@@ -11,5 +11,5 @@ pub enum MarketplaceError {
     #[msg("input name is too long!")]
     NameTooLong,
     #[msg("failed to verify seller")]
-    Verify
+    Verify,
 }

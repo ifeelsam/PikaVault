@@ -28,10 +28,7 @@ impl<'info> ReleaseEscrow<'info> {
         let escrow = &mut self.escrow;
         let seller = &self.seller;
 
-        require!(
-            escrow.seller == seller.key(),
-            MarketplaceError::Verify,
-        );
+        require!(escrow.seller == seller.key(), MarketplaceError::Verify);
 
         escrow.locked_amount = 0;
         Ok(())

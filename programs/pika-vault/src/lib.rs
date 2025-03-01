@@ -30,7 +30,7 @@ pub mod pika_vault {
         symbol: String,
         listing_price: u64,
         card_metadata: String,
-        image_url: String,
+        image_url: String
     ) -> Result<()> {
         ctx.accounts.mint_and_list(
             name,
@@ -38,7 +38,7 @@ pub mod pika_vault {
             listing_price,
             card_metadata,
             image_url,
-            &ctx.bumps,
+            &ctx.bumps
         )?;
         Ok(())
     }

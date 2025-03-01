@@ -415,7 +415,11 @@ describe("pika-vault testing", () => {
             0,
             `NFT Listed check failed!`
         );
-        assert.equal(userAccount.bump, buyerUserAccountBump, `Bump check failed!`);
+        assert.equal(
+            userAccount.bump,
+            buyerUserAccountBump,
+            `Bump check failed!`
+        );
     });
 
     it("Allows a buyer to purchase the NFT", async () => {
