@@ -30,7 +30,7 @@ pub mod pika_vault {
         symbol: String,
         listing_price: u64,
         card_metadata: String,
-        image_url: String
+        image_url: String,
     ) -> Result<()> {
         ctx.accounts.mint_and_list(
             name,
@@ -38,13 +38,22 @@ pub mod pika_vault {
             listing_price,
             card_metadata,
             image_url,
-            &ctx.bumps
+            &ctx.bumps,
         )?;
         Ok(())
     }
 
     pub fn delist(ctx: Context<Delist>) -> Result<()> {
         ctx.accounts.delist()
+    }
+
+    pub fn purchase(ctx: Context<Purchase>) -> Result<()> {
+        ctx.accounts.purchase()?;
+        Ok(())
+    }
+
+    pub fn release_escrow(ctx: Context<ReleaseEscrow>) -> Result<()> {
+        ctx.accounts.release_escrow()
     }
 }
 

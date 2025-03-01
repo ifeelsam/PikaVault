@@ -198,11 +198,11 @@ impl<'info> List<'info> {
             mint: self.nft_mint.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_ctx: CpiContext<'_, '_, '_, '_, TransferChecked<'_>> = CpiContext::new(cpi_program, cpi_accounts);
         transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
 
         // Update user stats
-        self.user_account.nft_listed += 1;
+        self.user_account.nft_listed += 1; 
 
         Ok(())
     }
