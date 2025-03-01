@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("6z9GJwjWb666YqcP8oocc54K4u3UbbJbh7efdKFH9x7Z");
+declare_id!("BWKeDzrKgFNb626Cu8UpjbMYKHpPH6hzi5UC9Gs3yZ6m");
 
 #[program]
 pub mod pika_vault {

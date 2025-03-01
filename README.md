@@ -43,8 +43,8 @@ src
 
 ## Documents Included
 
-1. <a src="https://cdn.edaquest.com/Arch%20Diagram%20(17).pdf">**LOI (Letter of Intent)**</a>: Outlines the project's objectives and goals.
-2. <a src="https://cdn.edaquest.com/Sam%20-%20Capstone%20Letter%20Of%20Intent%20.pdf">**Architecture Diagram**</a>: Visual representation of the system's structure.
+1.  <a href="https://cdn.edaquest.com/Arch%20Diagram%20(17).pdf">**LOI (Letter of Intent)**</a>: Outlines the project's objectives and goals.
+2.  <a href="https://cdn.edaquest.com/Sam%20-%20Capstone%20Letter%20Of%20Intent%20.pdf">**Architecture Diagram**</a>: Visual representation of the system's structure.
 
 
 ## How to Use
