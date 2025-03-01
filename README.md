@@ -58,7 +58,7 @@ initialize_marketplace(ctx, fee);
 
 ### 2. Register User:
 
-jkkkk```rust
+```rust
 register_user(ctx);
 ```
 
