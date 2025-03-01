@@ -77,7 +77,7 @@ impl<'info> Purchase<'info> {
         self.escrow.locked_amount = sale_amount;
         self.escrow.timestamp = Clock::get()?.unix_timestamp;
 
-        // Mark the listing as Sold so it can no longer be purchased.
+        // mark the listing as Sold so it can no longer be purchased.
         self.listing.status = ListingStatus::Sold;
 
         self.buyer_user_account.nft_bought += 1;

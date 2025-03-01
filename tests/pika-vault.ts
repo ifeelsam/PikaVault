@@ -6,7 +6,6 @@ import {
     SystemProgram,
     LAMPORTS_PER_SOL,
     PublicKey,
-    ComputeBudgetInstruction,
     Transaction,
     ComputeBudgetProgram,
     sendAndConfirmTransaction,
@@ -20,6 +19,10 @@ import {
     getAccount,
 } from "@solana/spl-token";
 import { BN } from "bn.js";
+
+const metadataProgramId = new PublicKey(
+    "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+);
 
 describe("pika-vault testing", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
@@ -38,10 +41,11 @@ describe("pika-vault testing", () => {
     let collectionMint: PublicKey;
     let metadata: PublicKey;
     let masterEdition: PublicKey;
-    const metadataProgramId = new PublicKey(
-        "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-    );
 
+    const [marketplacePDA, marketplaceBump] = PublicKey.findProgramAddressSync(
+        [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
+        program.programId
+    );
     it("Airdrop for nft", async () => {
         await Promise.all(
             [user].map(async (k) => {
@@ -70,12 +74,6 @@ describe("pika-vault testing", () => {
         );
     });
     it("Initializes Marketplace", async () => {
-        const [marketplacePDA, marketplaceBump] =
-            anchor.web3.PublicKey.findProgramAddressSync(
-                [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
-                program.programId
-            );
-
         const [treasuryPDA, treasuryBump] =
             anchor.web3.PublicKey.findProgramAddressSync(
                 [Buffer.from("treasury"), marketplacePDA.toBuffer()],
@@ -201,7 +199,7 @@ describe("pika-vault testing", () => {
         [listing, listingBump] = await PublicKey.findProgramAddressSync(
             [marketplace.toBuffer(), nftMint.toBuffer()],
             program.programId
-        ); // accounts fetch
+        );
 
         vault = await getAssociatedTokenAddress(nftMint, listing, true);
 
@@ -356,6 +354,118 @@ describe("pika-vault testing", () => {
             userAccountPDA
         );
         assert.equal(updatedUserAccount.nftListed.toNumber(), 0);
+    });
+
+    const buyer = Keypair.generate();
+
+    const provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    const connection = provider.connection;
+
+    let buyerUserAccount: PublicKey;
+    let buyerUserAccountBump: number;
+    [buyerUserAccount, buyerUserAccountBump] = PublicKey.findProgramAddressSync(
+        [Buffer.from("user_account"), buyer.publicKey.toBuffer()],
+        program.programId
+    );
+
+    it("Airdrop for buyer", async () => {
+        await Promise.all(
+            [buyer].map(async (k) => {
+                return await anchor
+                    .getProvider()
+                    .connection.requestAirdrop(
+                        k.publicKey,
+                        100 * LAMPORTS_PER_SOL
+                    )
+                    .then(confirmTx);
+            })
+        );
+    });
+
+    it("Registers a buyer", async () => {
+        await program.methods
+            .registerUser()
+            .accounts({
+                user: buyer.publicKey,
+            })
+            .signers([buyer])
+            .rpc();
+
+        const userAccount = await program.account.userAccount.fetch(
+            buyerUserAccount
+        );
+        assert.equal(
+            userAccount.authority.toString(),
+            buyer.publicKey.toString(),
+            `Authority check failed`
+        );
+        assert.equal(
+            userAccount.nftSold.toNumber(),
+            0,
+            `NFT Sold check failed!`
+        );
+        assert.equal(
+            userAccount.nftBought.toNumber(),
+            0,
+            `NFT Bought check failed!`
+        );
+        assert.equal(
+            userAccount.nftListed.toNumber(),
+            0,
+            `NFT Listed check failed!`
+        );
+        assert.equal(userAccount.bump, buyerUserAccountBump, `Bump check failed!`);
+    });
+
+    it("Allows a buyer to purchase the NFT", async () => {
+        let escrow: PublicKey;
+        [escrow] = PublicKey.findProgramAddressSync(
+            [Buffer.from("escrow"), listing.toBuffer()],
+            program.programId
+        );
+
+        const buyerBalanceBefore = await connection.getBalance(buyer.publicKey);
+        await program.methods
+            .purchase()
+            .accountsStrict({
+                buyer: buyer.publicKey,
+                buyerUserAccount: buyerUserAccount,
+                marketplace: marketplacePDA,
+                listing: listing,
+                escrow: escrow,
+                nftMint: nftMint,
+                vault: vault,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([buyer])
+            .rpc();
+
+        const updatedListing = await program.account.listingAccount.fetch(
+            listing
+        );
+        assert.notDeepEqual(updatedListing.status, { active: {} });
+
+        const escrowAccount = await program.account.escrow.fetch(escrow);
+        assert.equal(
+            escrowAccount.saleAmount.toString(),
+            LAMPORTS_PER_SOL.toString()
+        );
+        assert.equal(
+            escrowAccount.buyer.toString(),
+            buyer.publicKey.toString()
+        );
+        const buyerUser = await program.account.userAccount.fetch(
+            buyerUserAccount
+        );
+        assert.equal(buyerUser.nftBought, new BN(1));
+
+        // Check that buyer's lamport balance decreased by at least the sale amount.
+        const buyerBalanceAfter = await connection.getBalance(buyer.publicKey);
+        assert(
+            buyerBalanceBefore - buyerBalanceAfter >= LAMPORTS_PER_SOL,
+            "Buyer lamports did not decrease appropriately"
+        );
     });
 });
 

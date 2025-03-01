@@ -96,7 +96,6 @@ pub struct List<'info> {
 
     pub rent: Sysvar<'info, Rent>,
 
-    // Programs
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -144,7 +143,7 @@ impl<'info> List<'info> {
             uses: None,
         };
 
-        // Create metadata account via CPI
+        // create metadata account 
         let cpi_accounts = CreateMetadataAccountsV3 {
             metadata: self.metadata.to_account_info(),
             mint: self.nft_mint.to_account_info(),
@@ -159,7 +158,7 @@ impl<'info> List<'info> {
 
         create_metadata_accounts_v3(cpi_ctx, data, true, true, None)?;
 
-        // Create master edition via CPI
+        // create master edition 
         let cpi_accounts = CreateMasterEditionV3 {
             edition: self.master_edition_account.to_account_info(),
             mint: self.nft_mint.to_account_info(),
@@ -176,7 +175,7 @@ impl<'info> List<'info> {
 
         create_master_edition_v3(cpi_ctx, Some(0))?;
 
-        // Create the listing account
+        // create the listing account
         self.listing.set_inner(ListingAccount {
             owner: self.maker.key(),
             nft_address: self.nft_mint.key(),
@@ -201,7 +200,6 @@ impl<'info> List<'info> {
         let cpi_ctx: CpiContext<'_, '_, '_, '_, TransferChecked<'_>> = CpiContext::new(cpi_program, cpi_accounts);
         transfer_checked(cpi_ctx, 1, self.nft_mint.decimals)?;
 
-        // Update user stats
         self.user_account.nft_listed += 1; 
 
         Ok(())
