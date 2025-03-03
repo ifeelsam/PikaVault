@@ -13,3 +13,15 @@ pub enum MarketplaceError {
     #[msg("failed to verify seller")]
     Verify,
 }
+
+#[error_code]
+pub enum ListingError {
+    #[msg("The listing is not active.")]
+    ListingNotActive,
+
+    #[msg("Insufficient funds to complete the purchase.")]
+    InsufficientFunds,
+
+    #[msg("Escrow creation failed.")]
+    EscrowCreationFailed,
+}

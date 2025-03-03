@@ -1,8 +1,8 @@
-use crate::error::MarketplaceError;
-use crate::state::{ Escrow, ListingAccount, ListingStatus, MarketPlace, UserAccount };
+use crate::error::ListingError;
+use crate::state::{Escrow, ListingAccount, ListingStatus, MarketPlace, UserAccount};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{ program::invoke, system_instruction };
-use anchor_spl::token::{ Mint, TokenAccount };
+use anchor_lang::solana_program::{program::invoke, system_instruction};
+use anchor_spl::token::{Mint, TokenAccount};
 
 #[derive(Accounts)]
 pub struct Purchase<'info> {
@@ -12,9 +12,16 @@ pub struct Purchase<'info> {
     #[account(
         mut,
         seeds = [b"user_account", buyer.key().as_ref()],
-        bump = buyer_user_account.bump
+        bump = buyer_account.bump
     )]
-    pub buyer_user_account: Account<'info, UserAccount>,
+    pub buyer_account: Account<'info, UserAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"user_account", listing.owner.as_ref()],
+        bump = seller_account.bump
+    )]
+    pub seller_account: Account<'info, UserAccount>, // Seller stats account
 
     #[account(seeds = [b"marketplace", marketplace.authority.as_ref()], bump = marketplace.bump)]
     pub marketplace: Account<'info, MarketPlace>,
@@ -53,10 +60,15 @@ impl<'info> Purchase<'info> {
     pub fn purchase(&mut self) -> Result<()> {
         let sale_amount = self.listing.listing_price;
 
+        require!(
+            matches!(self.listing.status, ListingStatus::Active),
+            ListingError::ListingNotActive
+        );
+
         let transfer_instruction = system_instruction::transfer(
             self.buyer.key,
             self.escrow.to_account_info().key,
-            sale_amount
+            sale_amount,
         );
         invoke(
             &transfer_instruction,
@@ -64,7 +76,7 @@ impl<'info> Purchase<'info> {
                 self.buyer.to_account_info(),
                 self.escrow.to_account_info(),
                 self.system_program.to_account_info(),
-            ]
+            ],
         )?;
 
         self.escrow.seller = self.listing.owner;
@@ -77,7 +89,10 @@ impl<'info> Purchase<'info> {
         // mark the listing as Sold so it can no longer be purchased.
         self.listing.status = ListingStatus::Sold;
 
-        self.buyer_user_account.nft_bought += 1;
+        self.buyer_account.nft_bought += 1;
+        self.seller_account.nft_sold += 1;
+        self.seller_account.nft_listed -= 1;
+        // self.buyer_account.nft_listed += 1;
         // self.buyer_user_account.nft_bought = self
         //     .buyer_user_account
         //     .nft_bought
