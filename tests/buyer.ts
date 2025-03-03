@@ -45,6 +45,7 @@ describe("pika-vault testing", () => {
         [Buffer.from("marketplace"), admin.publicKey.toBuffer()],
         program.programId
     );
+
     it("Airdrop for nft", async () => {
         await Promise.all(
             [user].map(async (k) => {
@@ -288,14 +289,9 @@ describe("pika-vault testing", () => {
 
     let buyerUserAccount: PublicKey;
     let buyerUserAccountBump: number;
-    let sellerAccount: PublicKey;
-    let sellerAccountBump: number;
+
     [buyerUserAccount, buyerUserAccountBump] = PublicKey.findProgramAddressSync(
         [Buffer.from("user_account"), buyer.publicKey.toBuffer()],
-        program.programId
-    );
-    [sellerAccount, sellerAccountBump] = PublicKey.findProgramAddressSync(
-        [Buffer.from("user_account"), admin.publicKey.toBuffer()],
         program.programId
     );
 
