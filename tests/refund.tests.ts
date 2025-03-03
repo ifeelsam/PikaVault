@@ -17,13 +17,12 @@ import {
     getAssociatedTokenAddress,
     getAccount,
 } from "@solana/spl-token";
-import { BN } from "bn.js";
 
 const metadataProgramId = new PublicKey(
     "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
-describe("pika-vault testing", () => {
+describe("Refund testing", () => {
     anchor.setProvider(anchor.AnchorProvider.env());
 
     const program = anchor.workspace.PikaVault as Program<PikaVault>;
@@ -354,7 +353,6 @@ describe("pika-vault testing", () => {
             [Buffer.from("escrow"), listing.toBuffer()],
             program.programId
         );
-
         const buyerBalanceBefore = await connection.getBalance(buyer.publicKey);
         await program.methods
             .purchase()
@@ -365,7 +363,6 @@ describe("pika-vault testing", () => {
                 listing: listing,
                 escrow: escrow,
                 nftMint: nftMint,
-                vault: vault,
                 sellerAccount: userAccountPDA,
                 systemProgram: SystemProgram.programId,
             })
@@ -397,6 +394,78 @@ describe("pika-vault testing", () => {
             buyerBalanceBefore - buyerBalanceAfter >= LAMPORTS_PER_SOL,
             "Buyer lamports did not decrease appropriately"
         );
+
+        it("Refunds a buyer directly from escrow", async () => {
+            let escrow: PublicKey;
+            [escrow] = PublicKey.findProgramAddressSync(
+                [Buffer.from("escrow"), listing.toBuffer()],
+                program.programId
+            );
+            const initialBuyerBalance = await provider.connection.getBalance(
+                buyer.publicKey
+            );
+            const initialBuyerStats = await program.account.userAccount.fetch(
+                buyerUserAccount
+            );
+            const INITIAL_BUYER_NFT_BOUGHT =
+                initialBuyerStats.nftBought.toNumber();
+            const initialSellerNftSOld =
+                await program.account.userAccount.fetch(userAccountPDA);
+            const INITIAL_SELLER_NFT_SOLD =
+                initialSellerNftSOld.nftSold.toNumber();
+            // Call Refund Instruction
+            await program.methods
+                .refund()
+                .accountsStrict({
+                    buyerAccount: buyerUserAccount,
+                    sellerAccount: userAccountPDA,
+                    escrow: escrow,
+                    listing: listing,
+                    systemProgram: SystemProgram.programId,
+                    marketplace: marketplacePDA,
+                    buyer: buyer.publicKey,
+                })
+                .signers([admin])
+                .rpc();
+
+            const escrowAccount = await program.account.escrow.fetch(escrow);
+            const LISTING_PRICE = escrowAccount.lockedAmount.toNumber();
+            // Verify that funds were transferred back to the buyer's wallet
+            const finalBuyerBalance = await provider.connection.getBalance(
+                user.publicKey
+            );
+            assert.equal(
+                finalBuyerBalance,
+                initialBuyerBalance + LISTING_PRICE
+            );
+
+            // Verify that escrow is reset
+            assert.equal(escrowAccount.lockedAmount.toNumber(), 0);
+
+            // Verify that listing status is updated (if applicable)
+            const listingAccount = await program.account.listingAccount.fetch(
+                listing
+            );
+            assert.equal(listingAccount.status.toString(), "Active");
+
+            // Verify user stats updated
+            const updatedBuyerStats = await program.account.userAccount.fetch(
+                buyerUserAccount
+            );
+
+            assert.equal(
+                updatedBuyerStats.nftBought.toNumber(),
+                INITIAL_BUYER_NFT_BOUGHT - 1
+            );
+
+            const updatedSellerStats = await program.account.userAccount.fetch(
+                userAccountPDA
+            );
+            assert.equal(
+                updatedSellerStats.nftSold.toNumber(),
+                INITIAL_SELLER_NFT_SOLD - 1
+            );
+        });
     });
 });
 
